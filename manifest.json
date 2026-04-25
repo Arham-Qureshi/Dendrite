@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Dendrite",
+  "version": "1.0.0",
+  "description": "A neural navigator for your LLM conversations. Index questions, extract code, and visualize your logic flow.",
+
+  "permissions": [
+    "sidePanel",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*"
+  ],
+
+  "action": {
+    "default_title": "Dendrite — Open Navigator",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "side_panel": {
+    "default_path": "panel/index.html"
+  },
+
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "content/platforms.js",
+        "content/scraper.js",
+        "content/observer.js",
+        "content/navigator.js",
+        "content/main.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
