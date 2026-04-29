@@ -5,6 +5,53 @@
 
   const { Platforms, Scraper, Observer, Navigator } = window.Dendrite;
 
+  let initialized = false;
+  let platform = null;
+
+  //using regex to detect whether the next msg is a follow up or not,
+  // yes, harcoded
+  const PRONOUNS = /\b(it|this|that|them|those|above|previous|mentioned|it's|its|they|he|she)\b/i;
+  const CONTINUATIONS = /^(why|how|and|but|so|then|more|elaborate|clarify|continue|tell me more|give me an example)/i;
+  const QUESTION_STARTERS = /^(what|why|how|can you|could you|explain|tell me|show me|give me|what's|where|when)/i;
+
+  function isDynamicFollowUp(text, prevText) {
+    const clean = text.toLowerCase().trim();
+    const words = clean.split(/\s+/);
+
+    // shows that pronouns are mostly follow ups
+    if (PRONOUNS.test(clean)) return true;
+
+    // assumes continuation words are follow ups
+    if (CONTINUATIONS.test(clean) && words.length < 10) return true;
+
+    // checks if it starts with a question word, check what follows
+    const match = clean.match(QUESTION_STARTERS);
+    if (match) {
+      const starter = match[0];
+      const remainder = clean.slice(starter.length).trim();
+
+      // SOME BIG BRAIN LOGIC HERE 
+
+      // if nothing follows or only pronouns/filler follow, it's a follow-up
+      // e.g., "Explain?", "What is it?", "How?"
+      if (!remainder || remainder.length < 15 || PRONOUNS.test(remainder)) {
+        // But if it contains a specific noun that's not a pronoun, it might be a new question
+        //filter common words (hit and try by replacing the words below.)
+        const potentialTopic = remainder.replace(/\b(is|are|was|were|a|an|the|about|of|to|for|with|in|on|at|by|from)\b/g, '').trim();
+        if (potentialTopic.length > 2 && !PRONOUNS.test(potentialTopic)) {
+          return false; // if nothing then its beginning (i m a philosopher.)
+        }
+        return true;
+      }
+      return false; // lengthy question always a new topic.
+    }
+
+    //assumes short fragments without subjects are follow ups.
+    if (words.length <= 3 && !/^[A-Z]/.test(text)) return true;
+
+    return false;
+  }
+
   // Builds a multithreaded tree of questions (async)
   function applyLogicFlow(questions) {
     if (questions.length <= 1) {
@@ -21,13 +68,8 @@
     for (let i = 1; i < questions.length; i++) {
       const cur = questions[i];
       const prev = questions[i - 1];
-      const text = cur.fullText.toLowerCase().trim();
 
-      const isShort = text.length < 120;
-      const isVeryShort = text.length < 40;
-      const matchesPattern = FOLLOW_UP_RX.some(rx => rx.test(text));
-
-      if (isVeryShort || (isShort && matchesPattern)) {
+      if (isDynamicFollowUp(cur.fullText, prev.fullText)) {
         cur.parentId = prev.id;
         cur.depth = Math.min((prev.depth || 0) + 1, 3);
       } else {
