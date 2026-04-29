@@ -1,9 +1,6 @@
 'use strict';
-
-/**
- * @namespace Dendrite.Scraper
- */
-
+// actual scrapper engine
+//becuase we dont have money for an AI(summary)so we use this.
 window.Dendrite = window.Dendrite || {};
 
 window.Dendrite.Scraper = (() => {
@@ -14,11 +11,7 @@ window.Dendrite.Scraper = (() => {
 
   const MAX_NODES = 200;
 
-  /**
-   * @param {HTMLElement} el     - DOM element to anchor
-   * @param {string}      prefix - Short type prefix (q / c / l)
-   * @returns {string} The anchor ID
-   */
+
   function ensureAnchor(el, prefix) {
     if (el.dataset.dendriteId) return el.dataset.dendriteId;
 
@@ -30,8 +23,7 @@ window.Dendrite.Scraper = (() => {
     return id;
   }
 
-  /**
-   */
+
   function truncate(text) {
     const clean = text.replace(/\s+/g, ' ').trim();
     return clean.length <= PREVIEW_LEN
@@ -39,8 +31,7 @@ window.Dendrite.Scraper = (() => {
       : clean.slice(0, PREVIEW_LEN) + '…';
   }
 
-  /**
-   */
+
   function safeQueryAll(root, selector) {
     try {
       return root.querySelectorAll(selector);
@@ -145,10 +136,7 @@ window.Dendrite.Scraper = (() => {
   }
 
   return {
-    /**
-     * @param {Object} platform - Resolved platform config
-     * @returns {{ questions: Array, codeBlocks: Array, links: Array }}
-     */
+
     scrape(platform) {
       return {
         questions: scrapeQuestions(platform),
