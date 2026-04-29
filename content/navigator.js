@@ -2,6 +2,7 @@
 window.Dendrite = window.Dendrite || {};
 
 window.Dendrite.Navigator = (() => {
+  // highlight the questions in chat when clicked on side panel.
   let activeEl = null;
   let clearTimer = null;
 
