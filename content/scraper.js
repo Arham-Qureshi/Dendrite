@@ -68,6 +68,13 @@ window.Dendrite.Scraper = (() => {
     const container = document.querySelector(platform.selectors.chatContainer)
       || document.body;
     const els = safeQueryAll(container, platform.selectors.codeBlock);
+
+    // Get all user messages to find the preceding question for each code block
+    const questionEls = Array.from(safeQueryAll(document, platform.selectors.userMessage)).map(qEl => ({
+      el: qEl,
+      text: truncate(platform.getMessageText(qEl))
+    }));
+
     const nodes = [];
 
     els.forEach((el, i) => {
@@ -80,11 +87,20 @@ window.Dendrite.Scraper = (() => {
         ? langClass.replace(/^(language-|hljs-)/, '')
         : detectLanguageHeuristic(code);
 
+      // for heading of code we will use previous questions
+      let heading = null;
+      for (let j = questionEls.length - 1; j >= 0; j--) {
+        if (questionEls[j].el.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          heading = questionEls[j].text;
+          break;
+        }
+      }
+
       nodes.push({
         id: ensureAnchor(el.closest('pre') || el, 'c'),
         type: 'code',
         index: i + 1,
-        preview: truncate(code),
+        preview: heading ? heading : truncate(code),
         fullText: code,
         language,
         timestamp: Date.now(),
