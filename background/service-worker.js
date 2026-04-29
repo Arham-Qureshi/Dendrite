@@ -4,6 +4,25 @@ chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch(err => console.error('[Dendrite] sidePanel setup failed:', err));
 
+// Add context menu for "Ask LLM" (reply-> claude, ask gpt->chatGPT, ask gemini -> Gemini)
+// always a follow up!
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'ask-dendrite',
+    title: 'Ask Dendrite (LLM)',
+    contexts: ['selection']
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'ask-dendrite' && info.selectionText) {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'DENDRITE_ASK_SELECTION',
+      text: info.selectionText
+    });
+  }
+});
+
 // auto updation of side panel when tab changes
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'DENDRITE_UPDATE') {
