@@ -1,9 +1,5 @@
 'use strict';
 
-/**
- * @namespace Dendrite.Platforms
- */
-
 window.Dendrite = window.Dendrite || {};
 
 window.Dendrite.Platforms = (() => {
@@ -78,9 +74,7 @@ window.Dendrite.Platforms = (() => {
   };
 
   return {
-    /**
-     * @returns {Object} Platform config with an added `id` field.
-     */
+    
     resolve() {
       const host = location.hostname;
 
