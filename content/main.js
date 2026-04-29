@@ -132,5 +132,4 @@
   } else {
     setTimeout(init, 600);
   }
-
 })();
