@@ -52,7 +52,7 @@ window.Dendrite.Platforms = (() => {
         scrollContainer: 'main',
       },
       getMessageText(el) {
-        return el.innerText.trim();
+        return el.innerText.trim().replace(/^you said\s*/i, '');
       },
     },
   };
@@ -74,7 +74,7 @@ window.Dendrite.Platforms = (() => {
   };
 
   return {
-    
+
     resolve() {
       const host = location.hostname;
 
