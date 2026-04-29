@@ -64,6 +64,48 @@ window.Dendrite.Scraper = (() => {
     return nodes.slice(0, MAX_NODES);
   }
 
+  function extractCodeHeading(el, code, previousQuestionText) {
+    //Look for a filename comment
+    const firstLines = code.split('\n').slice(0, 3);
+    for (const line of firstLines) {
+      const match = line.trim().match(/^(?:\/\/|#|<!--|\/\*)\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)\s*(?:-->|\*\/)?$/);
+      if (match) return `File: ${match[1]}`;
+    }
+
+    //Look for the immediate preceding text 
+    const pre = el.closest('pre');
+    if (pre && pre.previousElementSibling) {
+      const prevEl = pre.previousElementSibling;
+      if (prevEl.tagName === 'P' || prevEl.tagName === 'DIV' || prevEl.tagName === 'H3' || prevEl.tagName === 'H4') {
+        const text = prevEl.textContent.trim();
+        if (text.endsWith(':') && text.length < 120) {
+          return truncate(text.replace(/:$/, ''));
+        }
+      }
+    }
+
+    // Extract main functions and make it title
+    const entityMatch = code.match(/(?:function|class|def|struct|interface|enum)\s+([a-zA-Z0-9_]+)/);
+    if (entityMatch) {
+      return entityMatch[0];
+    }
+
+
+    const varMatch = code.match(/(?:const|let|var)\s+([a-zA-Z0-9_]+)\s*=\s*(?:(?:\([^)]*\)|[a-zA-Z0-9_]+)\s*=>|function)/);
+    if (varMatch) {
+      return `${varMatch[1]} (Function)`;
+    }
+
+    // if nothing fallback to the user's previous question
+    if (previousQuestionText) {
+      return `Re: ${previousQuestionText}`;
+    }
+
+    // super fallback first line code 
+    const firstNonEmpty = firstLines.find(l => l.trim().length > 0);
+    return firstNonEmpty ? truncate(firstNonEmpty) : 'Code snippet';
+  }
+
   function scrapeCodeBlocks(platform) {
     const container = document.querySelector(platform.selectors.chatContainer)
       || document.body;
@@ -87,20 +129,22 @@ window.Dendrite.Scraper = (() => {
         ? langClass.replace(/^(language-|hljs-)/, '')
         : detectLanguageHeuristic(code);
 
-      // for heading of code we will use previous questions
-      let heading = null;
+      // Find preceding question text
+      let previousQuestionText = null;
       for (let j = questionEls.length - 1; j >= 0; j--) {
         if (questionEls[j].el.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
-          heading = questionEls[j].text;
+          previousQuestionText = questionEls[j].text;
           break;
         }
       }
+
+      const heading = extractCodeHeading(el, code, previousQuestionText);
 
       nodes.push({
         id: ensureAnchor(el.closest('pre') || el, 'c'),
         type: 'code',
         index: i + 1,
-        preview: heading ? heading : truncate(code),
+        preview: heading,
         fullText: code,
         language,
         timestamp: Date.now(),
