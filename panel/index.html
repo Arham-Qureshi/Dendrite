@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dendrite</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <header class="dn-header" id="header">
+
+    <div class="dn-brand">
+      <h1 class="dn-title">DENDRITE</h1>
+      <span class="dn-platform-badge" id="platform-badge">—</span>
+    </div>
+
+    <div class="dn-stats" id="stats-row">
+      <div class="dn-stat">
+        <div class="dn-stat-value" id="stat-questions">0</div>
+        <div class="dn-stat-label">Questions</div>
+      </div>
+      <div class="dn-stat">
+        <div class="dn-stat-value" id="stat-code">0</div>
+        <div class="dn-stat-label">Code</div>
+      </div>
+      <div class="dn-stat">
+        <div class="dn-stat-value" id="stat-links">0</div>
+        <div class="dn-stat-label">Links</div>
+      </div>
+    </div>
+
+    <nav class="dn-filters" id="filter-bar" role="tablist" aria-label="Content filter">
+      <button class="dn-filter-btn active" data-filter="questions" role="tab" aria-selected="true"
+        id="filter-questions">
+        <span class="dn-filter-icon" aria-hidden="true">Q.</span>
+        Questions
+      </button>
+      <button class="dn-filter-btn" data-filter="code" role="tab" aria-selected="false" id="filter-code">
+        <span class="dn-filter-icon" aria-hidden="true">&lt;/&gt;</span>
+        Code
+      </button>
+      <button class="dn-filter-btn" data-filter="links" role="tab" aria-selected="false" id="filter-links">
+        <span class="dn-filter-icon" aria-hidden="true">→</span>
+        Links
+      </button>
+    </nav>
+
+    <div class="dn-search-wrap">
+      <span class="dn-search-icon" aria-hidden="true">⌕</span>
+      <input class="dn-search" type="search" id="search-input" placeholder="Search..." autocomplete="off"
+        spellcheck="false" aria-label="Search sidebar">
+    </div>
+
+  </header>
+
+  <main class="dn-list" id="node-list" role="tabpanel">
+  </main>
+
+  <footer class="dn-footer">
+    <div class="dn-footer-text">
+      Dendrite v1.0 ·
+      <a href="https://github.com/Arham-Qureshi/Dentrite" target="_blank" rel="noopener noreferrer">Source</a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
