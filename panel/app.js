@@ -104,11 +104,45 @@
     const nodes = getFilteredNodes();
     if (nodes.length === 0) { showEmpty(); return; }
 
+    // groups the follow up below parent
+    const ordered = groupFollowUps(nodes);
+
     const frag = document.createDocumentFragment();
-    nodes.forEach(node => frag.appendChild(buildCard(node)));
+    ordered.forEach(node => frag.appendChild(buildCard(node)));
 
     DOM.list.innerHTML = '';
     DOM.list.appendChild(frag);
+  }
+
+  function groupFollowUps(nodes) {
+    // Only reorder questions
+    if (nodes.length === 0 || nodes[0].type !== 'question') return nodes;
+
+    const roots = [];
+    const childMap = {};
+
+    nodes.forEach(n => {
+      if (n.parentId) {
+        (childMap[n.parentId] = childMap[n.parentId] || []).push(n);
+      } else {
+        roots.push(n);
+      }
+    });
+
+    // Flatten
+    const result = [];
+    function append(node) {
+      result.push(node);
+      const children = childMap[node.id];
+      if (children) children.forEach(append);
+    }
+    roots.forEach(append);
+
+    // orphaned follow up will be at last (will fix later.)
+    const seen = new Set(result.map(n => n.id));
+    nodes.forEach(n => { if (!seen.has(n.id)) result.push(n); });
+
+    return result;
   }
 
   function getFilteredNodes() {
@@ -198,6 +232,9 @@
   }
 
   function formatBadge(node) {
+    if (node.type === 'question' && node.depth > 0) {
+      return `F${node.depth}`;
+    }
     const prefix = { question: 'Q', code: 'C', link: 'L' };
     return `${prefix[node.type] || '#'}${node.index}`;
   }

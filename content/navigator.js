@@ -2,6 +2,14 @@
 window.Dendrite = window.Dendrite || {};
 
 window.Dendrite.Navigator = (() => {
+  // highlight the questions in chat when clicked on side panel.
+  let activeEl = null;
+  let clearTimer = null;
+
+  const GLOW_COLOR = '#000000';
+  const GLOW_SHADOW = 'rgba(0,0,0,0.2)';
+  const GLOW_DURATION_MS = 2500;
+
   function findAnchor(anchorId) {
     return document.querySelector(`[data-dendrite-id="${anchorId}"]`)
       || document.getElementById(anchorId);
