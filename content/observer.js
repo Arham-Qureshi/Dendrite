@@ -4,6 +4,11 @@
 window.Dendrite = window.Dendrite || {};
 
 window.Dendrite.Observer = (() => {
+  let observer = null;
+  let debounceTimer = null;
+  let onChangeCallback = null;
+  const DEBOUNCE_MS = 600;
+
   function findTarget(platform) {
     const candidates = [
       platform.selectors.scrollContainer,
