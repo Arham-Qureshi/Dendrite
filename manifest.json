@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Dendrite",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A neural navigator for your LLM conversations. Index questions, extract code, and visualize your logic flow.",
   "permissions": [
     "sidePanel",
