@@ -10,6 +10,8 @@
     platformName: '',
     connected: false,
     activeTabId: null,
+    lastUrl: '',  //store last URL to detect same tab but new chat
+    refreshing: false,
   };
   //cahced DOM for later reference
   const $ = (id) => document.getElementById(id);
@@ -22,11 +24,13 @@
     statQuestions: $('stat-questions'),
     statCode: $('stat-code'),
     statLinks: $('stat-links'),
+    refreshBtn: $('refresh-btn'),
   };
 
   function init() {
     bindFilters();
     bindSearch();
+    bindRefreshButton();
     listenForMessages();
     refreshFromActiveTab();
   }
@@ -37,13 +41,16 @@
     state.links = payload.links || [];
     state.platform = payload.platform || null;
     state.platformName = payload.platformName || '';
+    state.lastUrl = payload.url || state.lastUrl;
     state.connected = true;
+    state.refreshing = false;
 
     updateStats();
     updateBadge();
+    updateRefreshBtn();
     render();
   }
-
+  //inject new elements if fails retyr.
   async function refreshFromActiveTab() {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -51,7 +58,37 @@
 
       state.activeTabId = tab.id;
 
-      chrome.tabs.sendMessage(tab.id, { action: 'DENDRITE_REFRESH' }, (res) => {
+      // first try
+      chrome.tabs.sendMessage(tab.id, { action: 'DENDRITE_REFRESH' }, async (res) => {
+        if (chrome.runtime.lastError || !res?.success) {
+          // content script not loaded — try injecting it
+          await tryInjectAndRetry(tab.id);
+          return;
+        }
+        ingestPayload(res.payload);
+      });
+    } catch {
+      showDisconnected();
+    }
+  }
+
+  // inject content scripts via service worker, then retry
+  async function tryInjectAndRetry(tabId) {
+    try {
+      const injectRes = await chrome.runtime.sendMessage({
+        action: 'DENDRITE_INJECT',
+        tabId,
+      });
+
+      if (!injectRes?.success) {
+        showDisconnected();
+        return;
+      }
+
+      // wait for scripts to initialize
+      await new Promise(r => setTimeout(r, 1200));
+
+      chrome.tabs.sendMessage(tabId, { action: 'DENDRITE_REFRESH' }, (res) => {
         if (chrome.runtime.lastError || !res?.success) {
           showDisconnected();
           return;
@@ -62,11 +99,51 @@
       showDisconnected();
     }
   }
-  // flash mssgs when triggers one of the following.
+
+  // force refresh(manual)
+  async function forceRefreshChat() {
+    if (state.refreshing) return;
+    state.refreshing = true;
+    updateRefreshBtn();
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab) { state.refreshing = false; updateRefreshBtn(); showDisconnected(); return; }
+
+      state.activeTabId = tab.id;
+
+      chrome.tabs.sendMessage(tab.id, { action: 'DENDRITE_FORCE_REFRESH' }, async (res) => {
+        if (chrome.runtime.lastError || !res?.success) {
+          await tryInjectAndRetry(tab.id);
+          state.refreshing = false;
+          updateRefreshBtn();
+          return;
+        }
+
+        // avoiding the spamming of refresh
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, { action: 'DENDRITE_REFRESH' }, (res2) => {
+            if (res2?.success) ingestPayload(res2.payload);
+            state.refreshing = false;
+            updateRefreshBtn();
+          });
+        }, 1200);
+      });
+    } catch {
+      state.refreshing = false;
+      updateRefreshBtn();
+      showDisconnected();
+    }
+  }
+
   function listenForMessages() {
     chrome.runtime.onMessage.addListener((msg) => {
-      if (msg.action === 'DENDRITE_UPDATE') ingestPayload(msg.payload);
-      if (msg.action === 'DENDRITE_TAB_CHANGED') setTimeout(refreshFromActiveTab, 300);
+      if (msg.action === 'DENDRITE_UPDATE') {
+        ingestPayload(msg.payload);
+      }
+      if (msg.action === 'DENDRITE_TAB_CHANGED') {
+        setTimeout(refreshFromActiveTab, 300);
+      }
     });
   }
 
@@ -96,6 +173,25 @@
         render();
       }, 120);
     });
+  }
+
+  function bindRefreshButton() {
+    if (DOM.refreshBtn) {
+      DOM.refreshBtn.addEventListener('click', () => {
+        forceRefreshChat();
+      });
+    }
+  }
+
+  function updateRefreshBtn() {
+    if (!DOM.refreshBtn) return;
+    if (state.refreshing) {
+      DOM.refreshBtn.classList.add('spinning');
+      DOM.refreshBtn.disabled = true;
+    } else {
+      DOM.refreshBtn.classList.remove('spinning');
+      DOM.refreshBtn.disabled = false;
+    }
   }
 
   function render() {
@@ -301,6 +397,8 @@
 
   function showDisconnected() {
     state.connected = false;
+    state.refreshing = false;
+    updateRefreshBtn();
 
     DOM.list.innerHTML = `
       <div class="dn-disconnected">
@@ -309,15 +407,27 @@
         <div class="dn-disconnected-desc">
           Navigate to ChatGPT, Claude, or Gemini to activate.
         </div>
-        <button class="dn-refresh-btn" id="retry-btn">RETRY</button>
+        <button class="dn-retry-btn" id="retry-btn">
+          <span class="dn-retry-icon">↻</span>
+          RETRY CONNECTION
+        </button>
       </div>
     `;
 
     const btn = $('retry-btn');
     if (btn) {
-      btn.addEventListener('click', () => {
-        btn.innerHTML = '<span class="dn-spinner"></span>';
-        setTimeout(refreshFromActiveTab, 400);
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="dn-spinner"></span> CONNECTING…';
+        await new Promise(r => setTimeout(r, 300));
+        await refreshFromActiveTab();
+        setTimeout(() => {
+          const retryBtn = $('retry-btn');
+          if (retryBtn) {
+            retryBtn.disabled = false;
+            retryBtn.innerHTML = '<span class="dn-retry-icon">↻</span> RETRY CONNECTION';
+          }
+        }, 3000);
       });
     }
   }
