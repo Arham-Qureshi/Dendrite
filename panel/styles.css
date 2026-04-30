@@ -191,7 +191,7 @@ body>* {
 
 .dn-filters {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-top: var(--rule-thin);
 }
 

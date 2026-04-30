@@ -1,0 +1,251 @@
+.dn-map-viewport {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  overflow: auto;
+  background: var(--white);
+  display: none;
+}
+
+.dn-map-viewport.visible {
+  display: block;
+}
+
+.dn-map-svg {
+  display: block;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.dn-edge {
+  fill: none;
+  stroke: var(--black);
+  stroke-width: 1.5;
+  transition: stroke 150ms ease, opacity 150ms ease, stroke-width 150ms ease;
+}
+
+.dn-edge.trunk {
+  stroke-dasharray: 4 3;
+  opacity: 0.5;
+}
+
+.dn-edge.dimmed {
+  stroke: var(--gray-lt);
+  opacity: 0.15;
+}
+
+.dn-edge.highlighted {
+  stroke: var(--black);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.dn-map-node {
+  cursor: pointer;
+}
+
+.dn-node-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
+.dn-node-dot {
+  fill: var(--white);
+  stroke: var(--black);
+  stroke-width: 2;
+  transition: fill 150ms ease, stroke 150ms ease, stroke-width 150ms ease;
+}
+
+.dn-map-node:hover .dn-node-dot {
+  fill: var(--black);
+  stroke-width: 2.5;
+}
+
+.dn-map-node.active .dn-node-dot {
+  fill: var(--black);
+}
+
+.dn-map-node.dimmed .dn-node-dot {
+  fill: var(--white);
+  stroke: var(--gray-lt);
+}
+
+.dn-map-node.virtual .dn-node-dot {
+  fill: var(--black);
+  stroke: var(--black);
+}
+
+.dn-node-ring {
+  fill: none;
+  stroke: var(--black);
+  stroke-width: 1;
+  opacity: 0.25;
+  transition: opacity 150ms ease, stroke 150ms ease;
+}
+
+.dn-map-node:hover .dn-node-ring {
+  opacity: 0.5;
+}
+
+.dn-map-node.dimmed .dn-node-ring {
+  stroke: var(--gray-lt);
+  opacity: 0.1;
+}
+
+.dn-node-label {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--black);
+  text-anchor: middle;
+  pointer-events: none;
+  transition: fill 150ms ease;
+}
+
+.dn-map-node.dimmed .dn-node-label {
+  fill: var(--gray-lt);
+}
+
+.dn-node-index {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 900;
+  fill: var(--black);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  transition: fill 150ms ease;
+}
+
+.dn-map-node:hover .dn-node-index,
+.dn-map-node.active .dn-node-index {
+  fill: var(--white);
+}
+
+.dn-map-node.virtual .dn-node-index {
+  fill: var(--white);
+  font-size: 12px;
+}
+
+.dn-map-node.dimmed .dn-node-index {
+  fill: var(--gray-lt);
+}
+
+.dn-map-tooltip {
+  position: fixed;
+  z-index: 200;
+  max-width: 220px;
+  padding: 10px 14px;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  border: none;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  word-break: break-word;
+}
+
+.dn-map-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dn-map-tooltip-badge {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.dn-map-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.dn-map-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  border: 2px solid var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dn-map-empty-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--black);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.dn-map-empty-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--black);
+  margin-bottom: 8px;
+}
+
+.dn-map-empty-desc {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--gray);
+  line-height: 1.6;
+  max-width: 220px;
+  font-style: italic;
+}
+
+.dn-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 16px;
+  border-top: var(--rule-thin);
+  background: var(--white);
+}
+
+.dn-map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.dn-map-legend-dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--black);
+  background: var(--white);
+  flex-shrink: 0;
+}
+
+.dn-map-legend-dot.root {
+  background: var(--black);
+}
+
+.dn-map-legend-line {
+  width: 14px;
+  height: 0;
+  border-top: 1.5px solid var(--black);
+  flex-shrink: 0;
+}
