@@ -10,6 +10,9 @@ window.Dendrite.Scraper = (() => {
   const PREVIEW_LEN = 80;
 
   const MAX_NODES = 200;
+  const MAX_RESPONSE_IMAGES = 8;
+  const MAX_RESPONSE_LINKS = 8;
+  const MAX_RESPONSE_SNIPPETS = 8;
 
 
   function ensureAnchor(el, prefix) {
@@ -41,8 +44,120 @@ window.Dendrite.Scraper = (() => {
     }
   }
 
-  function scrapeQuestions(platform) {
-    const els = safeQueryAll(document, platform.selectors.userMessage);
+  function cleanText(text) {
+    return String(text || '')
+      .replace(/\r\n?/g, '\n')
+      .replace(/\u200b/g, '')
+      .trim();
+  }
+
+  function truncateHard(text, max) {
+    const clean = cleanText(text).replace(/\s+/g, ' ');
+    if (clean.length <= max) return clean;
+    return clean.slice(0, max) + '…';
+  }
+
+  function pushUnique(arr, seen, value) {
+    if (!value) return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    arr.push(value);
+  }
+
+  function normalizeUrl(url) {
+    try {
+      return new URL(url, location.href).href;
+    } catch {
+      return url || '';
+    }
+  }
+
+  function buildMessageOrderMap(platform) {
+    const container = document.querySelector(platform.selectors.chatContainer) || document.body;
+    const combinedSelector = `${platform.selectors.userMessage}, ${platform.selectors.assistantMessage}`;
+    const all = Array.from(safeQueryAll(container, combinedSelector));
+    const dedup = [];
+    const seen = new Set();
+
+    all.forEach((el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      dedup.push(el);
+    });
+
+    const map = new WeakMap();
+    dedup.forEach((el, i) => map.set(el, i + 1));
+    return map;
+  }
+
+  function extractResponseImages(el) {
+    const urls = [];
+    const seen = new Set();
+    const imgs = safeQueryAll(el, 'img');
+
+    imgs.forEach((img) => {
+      if (urls.length >= MAX_RESPONSE_IMAGES) return;
+      const raw = img.currentSrc || img.src || img.dataset.src || img.dataset.original || '';
+      if (!raw) return;
+      if (raw.startsWith('data:') && raw.length < 500) return;
+      if (/avatar|icon|emoji|logo|favicon/i.test(raw)) return;
+      if (/avatar|icon|emoji|logo|favicon/i.test(img.className)) return;
+      const href = normalizeUrl(raw);
+      pushUnique(urls, seen, href);
+    });
+
+    return urls;
+  }
+
+  function extractResponseLinks(el) {
+    const out = [];
+    const seen = new Set();
+    const anchors = safeQueryAll(el, 'a[href]');
+
+    anchors.forEach((a) => {
+      if (out.length >= MAX_RESPONSE_LINKS) return;
+      const href = normalizeUrl(a.href || '');
+      if (!href || !/^https?:\/\//i.test(href)) return;
+      pushUnique(out, seen, href);
+    });
+
+    return out;
+  }
+
+  function extractResponseSnippets(el, rawText) {
+    const snippets = [];
+    const seen = new Set();
+
+    // File cards / artifact-like response blocks (README.md, docs, etc.)
+    const fileish = safeQueryAll(el, '[data-testid*="file"], [class*="file"], [class*="attachment"], [class*="artifact"]');
+    fileish.forEach((node) => {
+      if (snippets.length >= MAX_RESPONSE_SNIPPETS) return;
+      const txt = truncateHard(node.textContent || '', 220);
+      if (txt.length < 3) return;
+      pushUnique(snippets, seen, txt);
+    });
+
+    // Structured text blocks for non-plain responses.
+    const blocks = safeQueryAll(el, 'h1, h2, h3, h4, p, li, blockquote, pre, code');
+    blocks.forEach((node) => {
+      if (snippets.length >= MAX_RESPONSE_SNIPPETS) return;
+      const txt = truncateHard(node.textContent || '', 220);
+      if (txt.length < 12) return;
+      pushUnique(snippets, seen, txt);
+    });
+
+    // If we already have raw text, keep only snippets that add novel clues.
+    if (rawText) {
+      const rawCompact = truncateHard(rawText, 2000).toLowerCase();
+      return snippets.filter(s => !rawCompact.includes(s.toLowerCase())).slice(0, MAX_RESPONSE_SNIPPETS);
+    }
+
+    return snippets.slice(0, MAX_RESPONSE_SNIPPETS);
+  }
+
+  function scrapeQuestions(platform, orderMap) {
+    const container = document.querySelector(platform.selectors.chatContainer) || document.body;
+    const els = safeQueryAll(container, platform.selectors.userMessage);
     const nodes = [];
 
     els.forEach((el, i) => {
@@ -57,6 +172,7 @@ window.Dendrite.Scraper = (() => {
         fullText: raw,
         parentId: null,   // assigned later by LogicFlow
         depth: 0,
+        domOrder: orderMap.get(el) || (i + 1),
         timestamp: Date.now(),
       });
     });
@@ -65,20 +181,43 @@ window.Dendrite.Scraper = (() => {
   }
 
   // scrapes the llms responses and make markdown file for big leagues
-  function scrapeResponses(platform) {
-    const els = safeQueryAll(document, platform.selectors.assistantMessage);
+  function scrapeResponses(platform, orderMap) {
+    const container = document.querySelector(platform.selectors.chatContainer) || document.body;
+    const els = safeQueryAll(container, platform.selectors.assistantMessage);
     const nodes = [];
 
     els.forEach((el, i) => {
-      const raw = platform.getMessageText(el);
-      if (!raw) return;
+      const raw = cleanText(platform.getMessageText(el));
+      const images = extractResponseImages(el);
+      const responseLinks = extractResponseLinks(el);
+      const snippets = extractResponseSnippets(el, raw);
+
+      if (!raw && !images.length && !responseLinks.length && !snippets.length) return;
+
+      const parts = [];
+      if (raw) parts.push(raw);
+      if (!raw && snippets.length) parts.push(snippets.join('\n'));
+      if (images.length) parts.push(`Images:\n${images.join('\n')}`);
+      if (responseLinks.length) parts.push(`Links:\n${responseLinks.join('\n')}`);
+      const fullText = parts.join('\n\n').trim();
+
+      const previewSeed = raw || snippets[0] || (images.length ? 'Image response' : 'Assistant response');
+      let responseKind = 'text';
+      if (!raw && images.length) responseKind = 'image';
+      if (!raw && !images.length && snippets.length) responseKind = 'snippet';
+      if (!raw && !images.length && !snippets.length && responseLinks.length) responseKind = 'link';
 
       nodes.push({
         id: ensureAnchor(el, 'r'),
         type: 'response',
         index: i + 1,
-        preview: truncate(raw),
-        fullText: raw,
+        preview: truncate(previewSeed),
+        fullText,
+        responseKind,
+        images,
+        responseLinks,
+        snippets,
+        domOrder: orderMap.get(el) || (i + 1),
         timestamp: Date.now(),
       });
     });
@@ -309,9 +448,10 @@ window.Dendrite.Scraper = (() => {
   return {
 
     scrape(platform) {
+      const orderMap = buildMessageOrderMap(platform);
       return {
-        questions: scrapeQuestions(platform),
-        responses: scrapeResponses(platform),
+        questions: scrapeQuestions(platform, orderMap),
+        responses: scrapeResponses(platform, orderMap),
         codeBlocks: scrapeCodeBlocks(platform),
         links: scrapeLinks(platform),
         artifacts: scrapeArtifacts(platform),
