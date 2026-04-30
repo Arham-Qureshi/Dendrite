@@ -74,6 +74,17 @@
             <span class="dn-dropdown-item-label">Artifacts</span>
             <span class="dn-dropdown-item-count" id="stat-artifacts">0</span>
           </button>
+          <div class="dn-dropdown-divider"></div>
+          <button class="dn-dropdown-item action" id="action-export-md">
+            <span class="dn-dropdown-item-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="square">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </span>
+            <span class="dn-dropdown-item-label">Export Dev-Doc</span>
+          </button>
         </div>
       </div>
     </nav>
@@ -93,6 +104,7 @@
   </div>
 
   <div class="dn-map-tooltip" id="map-tooltip"></div>
+  <div class="dn-toast" id="toast" aria-live="polite"></div>
 
   <div class="dn-map-legend" id="map-legend" style="display:none;">
     <div class="dn-map-legend-item">
@@ -115,6 +127,7 @@
 
   <script src="tree_engine.js"></script>
   <script src="map.js"></script>
+  <script src="exporter.js"></script>
   <script src="app.js"></script>
 </body>
 
