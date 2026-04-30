@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dendrite</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="map.css">
 </head>
 
 <body>
@@ -38,6 +39,14 @@
         <span class="dn-filter-count" id="stat-links">0</span>
         <span class="dn-filter-label">Links</span>
       </button>
+      <button class="dn-filter-btn" data-filter="map" role="tab" aria-selected="false" id="filter-map">
+        <span class="dn-filter-count" id="stat-map">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="square">
+            <path d="M12 3v6M12 9L7 16M12 9l5 7M7 16l3 5M17 16l-3 5" />
+          </svg>
+        </span>
+        <span class="dn-filter-label">Map</span>
+      </button>
     </nav>
 
     <div class="dn-search-wrap">
@@ -51,6 +60,23 @@
   <main class="dn-list" id="node-list" role="tabpanel">
   </main>
 
+  <div class="dn-map-viewport" id="map-viewport" role="tabpanel" aria-label="Logic map">
+  </div>
+
+  <div class="dn-map-tooltip" id="map-tooltip"></div>
+
+  <div class="dn-map-legend" id="map-legend" style="display:none;">
+    <div class="dn-map-legend-item">
+      <span class="dn-map-legend-dot root"></span> Root
+    </div>
+    <div class="dn-map-legend-item">
+      <span class="dn-map-legend-dot"></span> Follow-up
+    </div>
+    <div class="dn-map-legend-item">
+      <span class="dn-map-legend-line"></span> Edge
+    </div>
+  </div>
+
   <footer class="dn-footer">
     <div class="dn-footer-text">
       Dendrite v1.0 ·
@@ -58,6 +84,8 @@
     </div>
   </footer>
 
+  <script src="tree_engine.js"></script>
+  <script src="map.js"></script>
   <script src="app.js"></script>
 </body>
 
