@@ -191,7 +191,7 @@ body>* {
 
 .dn-filters {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr 1fr auto;
   border-top: var(--rule-thin);
 }
 
@@ -209,8 +209,113 @@ body>* {
   transition: all var(--transition);
 }
 
-.dn-filter-btn:last-child {
+.dn-filter-btn:last-child,
+.dn-dropdown:last-child .dn-dropdown-toggle {
   border-right: none;
+}
+
+/* ── More Dropdown ── */
+
+.dn-dropdown {
+  position: relative;
+  display: flex;
+}
+
+.dn-dropdown-toggle {
+  width: 100%;
+  gap: 2px;
+}
+
+.dn-dropdown-toggle svg {
+  transition: transform 200ms ease;
+}
+
+.dn-dropdown.open .dn-dropdown-toggle svg {
+  transform: rotate(180deg);
+}
+
+.dn-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 180px;
+  background: var(--white);
+  border: var(--rule-thin);
+  border-top: var(--rule-thick);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 150ms ease, transform 150ms ease, visibility 0s 150ms;
+}
+
+.dn-dropdown.open .dn-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 150ms ease, transform 150ms ease, visibility 0s 0s;
+}
+
+.dn-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: var(--rule-thin);
+  background: var(--white);
+  color: var(--black);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.dn-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dn-dropdown-item:hover {
+  background: var(--black);
+  color: var(--white);
+}
+
+.dn-dropdown-item.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+.dn-dropdown-item-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dn-dropdown-item-label {
+  flex: 1;
+  text-align: left;
+}
+
+.dn-dropdown-item-count {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 0.85rem;
+  min-width: 20px;
+  text-align: right;
+}
+
+.dn-dropdown-toggle.has-active {
+  background: var(--black);
+  color: var(--white);
+}
+
+.dn-dropdown-toggle.has-active .dn-filter-label {
+  color: var(--white);
 }
 
 .dn-filter-count {
