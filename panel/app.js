@@ -36,6 +36,7 @@
     moreToggle: $('more-toggle'),
     moreMenu: $('more-menu'),
     exportBtn: $('action-export-md'),
+    exportContextReadmeBtn: $('action-export-context-readme'),
     toast: $('toast'),
   };
 
@@ -300,6 +301,21 @@
 
         const ok = DendriteExporter.exportDevDoc(state);
         if (ok) showToast('Dev-Doc exported');
+      });
+    }
+
+    if (DOM.exportContextReadmeBtn) {
+      DOM.exportContextReadmeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeDropdown();
+
+        if (!state.connected || !state.questions.length) {
+          showToast('Nothing to export');
+          return;
+        }
+
+        const ok = DendriteContextReadmeExporter.exportContextReadme(state);
+        if (ok) showToast('Context README exported');
       });
     }
   }
