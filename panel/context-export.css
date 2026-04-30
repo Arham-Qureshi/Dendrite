@@ -1,0 +1,21 @@
+.dn-context-readme-action {
+  position: relative;
+}
+
+.dn-context-readme-action .dn-dropdown-item-label {
+  letter-spacing: 0.08em;
+}
+
+.dn-context-readme-action::after {
+  content: 'MIGRATE';
+  font-family: var(--font-body);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gray);
+}
+
+.dn-context-readme-action:hover::after,
+.dn-context-readme-action:focus-visible::after {
+  color: var(--white);
+}
