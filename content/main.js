@@ -97,6 +97,7 @@
         questions: data.questions,
         codeBlocks: data.codeBlocks,
         links: data.links,
+        artifacts: data.artifacts || [],
         platform: platform.id,
         platformName: platform.displayName,
         url: location.href,
@@ -129,7 +130,7 @@
 
       console.log(
         `[Dendrite] Re-synced for new chat — ${data.questions.length} questions, ` +
-        `${data.codeBlocks.length} code blocks, ${data.links.length} links`
+        `${data.codeBlocks.length} code blocks, ${data.links.length} links, ${(data.artifacts || []).length} artifacts`
       );
     }, 800);
   }
@@ -159,6 +160,7 @@
             questions: data.questions,
             codeBlocks: data.codeBlocks,
             links: data.links,
+            artifacts: data.artifacts || [],
             platform: platform ? platform.id : null,
             platformName: platform ? platform.displayName : '',
             url: location.href,
@@ -223,7 +225,7 @@
 
     console.log(
       `[Dendrite] Ready — ${data.questions.length} questions, ` +
-      `${data.codeBlocks.length} code blocks, ${data.links.length} links indexed`
+      `${data.codeBlocks.length} code blocks, ${data.links.length} links, ${(data.artifacts || []).length} artifacts indexed`
     );
   }
 
