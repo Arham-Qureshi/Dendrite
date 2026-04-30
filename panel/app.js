@@ -4,6 +4,7 @@
     questions: [],
     codeBlocks: [],
     links: [],
+    artifacts: [],
     activeFilter: 'questions',
     searchQuery: '',
     platform: null,
@@ -25,14 +26,19 @@
     statQuestions: $('stat-questions'),
     statCode: $('stat-code'),
     statLinks: $('stat-links'),
+    statArtifacts: $('stat-artifacts'),
     refreshBtn: $('refresh-btn'),
     mapViewport: $('map-viewport'),
     mapTooltip: $('map-tooltip'),
     mapLegend: $('map-legend'),
+    moreDropdown: $('more-dropdown'),
+    moreToggle: $('more-toggle'),
+    moreMenu: $('more-menu'),
   };
 
   async function init() {
     bindFilters();
+    bindDropdown();
     bindSearch();
     bindRefreshButton();
     listenForMessages();
@@ -49,6 +55,7 @@
     state.questions = payload.questions || [];
     state.codeBlocks = payload.codeBlocks || [];
     state.links = payload.links || [];
+    state.artifacts = payload.artifacts || [];
     state.platform = payload.platform || null;
     state.platformName = payload.platformName || '';
     state.lastUrl = payload.url || state.lastUrl;
@@ -158,28 +165,99 @@
   }
 
   function bindFilters() {
+    // Handle primary tab clicks (Questions, Code, Map)
     DOM.filterBar.addEventListener('click', (e) => {
-      const btn = e.target.closest('.dn-filter-btn');
+      const btn = e.target.closest('.dn-filter-btn:not(.dn-dropdown-toggle)');
       if (!btn || btn.dataset.filter === state.activeFilter) return;
+      if (btn.closest('.dn-dropdown')) return;
 
-      DOM.filterBar.querySelectorAll('.dn-filter-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      state.activeFilter = btn.dataset.filter;
-
-      const isMap = state.activeFilter === 'map';
-      DOM.list.style.display = isMap ? 'none' : '';
-      DOM.mapViewport.classList.toggle('visible', isMap);
-      DOM.mapLegend.style.display = isMap ? '' : 'none';
-
-      if (DOM.searchWrap) DOM.searchWrap.style.display = isMap ? 'none' : '';
-
-      render();
+      activateFilter(btn.dataset.filter);
+      clearDropdownActive();
+      closeDropdown();
     });
+  }
+
+  function bindDropdown() {
+    if (DOM.moreToggle) {
+      DOM.moreToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = DOM.moreDropdown.classList.toggle('open');
+        DOM.moreToggle.setAttribute('aria-expanded', isOpen);
+      });
+    }
+
+    //dropdown button handler.
+    if (DOM.moreMenu) {
+      DOM.moreMenu.addEventListener('click', (e) => {
+        const item = e.target.closest('.dn-dropdown-item');
+        if (!item) return;
+        e.stopPropagation();
+
+        activateFilter(item.dataset.filter);
+
+        // Mark dropdown item as active, highlight "More" toggle
+        DOM.moreMenu.querySelectorAll('.dn-dropdown-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        DOM.moreToggle.classList.add('has-active');
+
+        // Deactivate primary tabs
+        DOM.filterBar.querySelectorAll('.dn-filter-btn:not(.dn-dropdown-toggle)').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+
+        closeDropdown();
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (DOM.moreDropdown && !DOM.moreDropdown.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+  }
+
+  function activateFilter(filter) {
+    // Deactivate all primary tabs
+    DOM.filterBar.querySelectorAll('.dn-filter-btn:not(.dn-dropdown-toggle)').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+
+    // If it's a primary tab, mark it active
+    const primaryBtn = DOM.filterBar.querySelector(`.dn-filter-btn[data-filter="${filter}"]`);
+    if (primaryBtn) {
+      primaryBtn.classList.add('active');
+      primaryBtn.setAttribute('aria-selected', 'true');
+    }
+
+    state.activeFilter = filter;
+
+    const isMap = filter === 'map';
+    DOM.list.style.display = isMap ? 'none' : '';
+    DOM.mapViewport.classList.toggle('visible', isMap);
+    DOM.mapLegend.style.display = isMap ? '' : 'none';
+
+    if (DOM.searchWrap) DOM.searchWrap.style.display = isMap ? 'none' : '';
+
+    render();
+  }
+
+  function clearDropdownActive() {
+    if (DOM.moreMenu) {
+      DOM.moreMenu.querySelectorAll('.dn-dropdown-item').forEach(i => i.classList.remove('active'));
+    }
+    if (DOM.moreToggle) {
+      DOM.moreToggle.classList.remove('has-active');
+    }
+  }
+
+  function closeDropdown() {
+    if (DOM.moreDropdown) {
+      DOM.moreDropdown.classList.remove('open');
+      DOM.moreToggle.setAttribute('aria-expanded', 'false');
+    }
   }
   // search query in side panel
   function bindSearch() {
@@ -275,13 +353,14 @@
       questions: state.questions,
       code: state.codeBlocks,
       links: state.links,
+      artifacts: state.artifacts,
     };
     const pool = pools[state.activeFilter] || state.questions;
 
     if (!state.searchQuery) return pool;
 
     return pool.filter(n => {
-      const hay = [n.preview, n.fullText, n.href].filter(Boolean).join(' ').toLowerCase();
+      const hay = [n.preview, n.fullText, n.href, n.artifactType].filter(Boolean).join(' ').toLowerCase();
       return hay.includes(state.searchQuery);
     });
   }
@@ -360,7 +439,7 @@
     if (node.type === 'question' && node.depth > 0) {
       return `F${node.depth}`;
     }
-    const prefix = { question: 'Q', code: 'C', link: 'L' };
+    const prefix = { question: 'Q', code: 'C', link: 'L', artifact: 'A' };
     return `${prefix[node.type] || '#'}${node.index}`;
   }
 
@@ -397,6 +476,7 @@
     DOM.statQuestions.textContent = state.questions.length;
     DOM.statCode.textContent = state.codeBlocks.length;
     DOM.statLinks.textContent = state.links.length;
+    if (DOM.statArtifacts) DOM.statArtifacts.textContent = state.artifacts.length;
   }
 
   function updateBadge() {
@@ -404,7 +484,7 @@
   }
 
   function showEmpty() {
-    const name = { questions: 'questions', code: 'code blocks', links: 'links' };
+    const name = { questions: 'questions', code: 'code blocks', links: 'links', artifacts: 'artifacts' };
 
     //adds this tag set at every update
     DOM.list.innerHTML = `
