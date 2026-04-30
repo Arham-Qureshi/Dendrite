@@ -7,6 +7,8 @@
 
   let initialized = false;
   let platform = null;
+  let lastKnownUrl = location.href; //through this we can detect new chats within tab it keeps loc 
+  let urlPollTimer = null;
 
   //using regex to detect whether the next msg is a follow up or not,
   // yes, harcoded
@@ -104,6 +106,46 @@
     });
   }
 
+  // same tab, different chat observer
+  function reinitForNewChat() {
+    Observer.stop();
+
+    // scraps new chat from same tabs
+    if (window.Dendrite.Scraper._resetAnchors) {
+      window.Dendrite.Scraper._resetAnchors();
+    }
+
+    lastKnownUrl = location.href;
+
+    // delay for full rendering
+    setTimeout(() => {
+      const data = performScrape();
+      broadcastUpdate(data);
+
+      Observer.start(platform, () => {
+        const fresh = performScrape();
+        broadcastUpdate(fresh);
+      });
+
+      console.log(
+        `[Dendrite] Re-synced for new chat — ${data.questions.length} questions, ` +
+        `${data.codeBlocks.length} code blocks, ${data.links.length} links`
+      );
+    }, 800);
+  }
+
+  // same tab (SPA) observer
+  function startUrlWatcher() {
+    if (urlPollTimer) clearInterval(urlPollTimer);
+
+    urlPollTimer = setInterval(() => {
+      if (location.href !== lastKnownUrl) {
+        console.log(`[Dendrite] URL change detected: ${lastKnownUrl} → ${location.href}`);
+        reinitForNewChat();
+      }
+    }, 800);
+  }
+
   function handleMessage(message, _sender, sendResponse) {
     switch (message.action) {
       case 'DENDRITE_REFRESH': {
@@ -119,8 +161,21 @@
             links: data.links,
             platform: platform ? platform.id : null,
             platformName: platform ? platform.displayName : '',
+            url: location.href,
           },
         });
+        return true;
+      }
+
+      // force refresh (manually refreshed)
+      case 'DENDRITE_FORCE_REFRESH': {
+        if (!initialized) {
+          init();
+        } else {
+          reinitForNewChat();
+        }
+        // respond immediately(re scrape)
+        sendResponse({ success: true });
         return true;
       }
 
@@ -136,6 +191,7 @@
           success: true,
           platform: platform ? platform.id : null,
           platformName: platform ? platform.displayName : '',
+          url: location.href,
         });
         return true;
       }
@@ -150,6 +206,7 @@
     initialized = true;
 
     platform = Platforms.resolve();
+    lastKnownUrl = location.href;
     console.log(`[Dendrite] Bootstrapping on ${platform.displayName} (${location.hostname})`);
 
     const data = performScrape();
@@ -160,6 +217,9 @@
       const fresh = performScrape();
       broadcastUpdate(fresh);
     });
+
+    // (chat switching)
+    startUrlWatcher();
 
     console.log(
       `[Dendrite] Ready — ${data.questions.length} questions, ` +

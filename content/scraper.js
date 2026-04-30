@@ -129,7 +129,7 @@ window.Dendrite.Scraper = (() => {
         ? langClass.replace(/^(language-|hljs-)/, '')
         : detectLanguageHeuristic(code);
 
-      // Find preceding question text
+      // preceding question text
       let previousQuestionText = null;
       for (let j = questionEls.length - 1; j >= 0; j--) {
         if (questionEls[j].el.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
@@ -203,6 +203,13 @@ window.Dendrite.Scraper = (() => {
         codeBlocks: scrapeCodeBlocks(platform),
         links: scrapeLinks(platform),
       };
+    },
+    //reset ids and anchor when chat swiths.
+    _resetAnchors() {
+      document.querySelectorAll('[data-dendrite-id]').forEach(el => {
+        delete el.dataset.dendriteId;
+      });
+      anchorSeq = 0;
     },
   };
 
