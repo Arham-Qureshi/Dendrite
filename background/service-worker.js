@@ -23,14 +23,38 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// auto updation of side panel when tab changes
+// no need refresh browser, we have dedicated button in sidebar
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'DENDRITE_UPDATE') {
     return false;
   }
 
+  // when refershed it will check and inject the elements
+  if (message.action === 'DENDRITE_INJECT') {
+    const tabId = message.tabId;
+    if (!tabId) { sendResponse({ success: false }); return true; }
+
+    chrome.scripting.executeScript({
+      target: { tabId },
+      files: [
+        'content/platforms.js',
+        'content/scraper.js',
+        'content/observer.js',
+        'content/navigator.js',
+        'content/main.js',
+      ],
+    }).then(() => {
+      sendResponse({ success: true });
+    }).catch(err => {
+      console.warn('[Dendrite] Script injection failed:', err);
+      sendResponse({ success: false, error: err.message });
+    });
+    return true; // async response
+  }
+
   return false;
 });
+
 //triggers when tab changes
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
@@ -44,12 +68,13 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
+// single page application navigation
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, _tab) => {
   if (changeInfo.status === 'complete' || changeInfo.url) {
     chrome.runtime.sendMessage({
       action: 'DENDRITE_TAB_CHANGED',
       tabId,
-      url: changeInfo.url || '',
+      url: changeInfo.url || _tab.url || '',
     }).catch(() => { });
   }
 });
