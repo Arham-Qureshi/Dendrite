@@ -195,6 +195,95 @@ window.Dendrite.Scraper = (() => {
     return 'text';
   }
 
+  //used for scraping (img,docx,pdf etc.)
+  function scrapeArtifacts(platform) {
+    const container = document.querySelector(platform.selectors.chatContainer)
+      || document.body;
+
+    const DOC_EXT = /\.(pdf|docx?|xlsx?|csv|pptx?|txt|rtf|odt)$/i;
+    const IMG_MIN_SIZE = 40;
+
+    const nodes = [];
+    const seen = new Set();
+
+    const imgs = safeQueryAll(container, 'img');
+    imgs.forEach((img) => {
+      const src = img.src || img.dataset.src || '';
+      if (!src || seen.has(src)) return;
+      if (img.naturalWidth && img.naturalWidth < IMG_MIN_SIZE) return;
+      if (img.naturalHeight && img.naturalHeight < IMG_MIN_SIZE) return;
+      if (src.startsWith('data:') && src.length < 500) return;
+      if (/avatar|icon|emoji|logo|favicon/i.test(src)) return;
+      if (/avatar|icon|emoji|logo|favicon/i.test(img.className)) return;
+
+      seen.add(src);
+
+      const alt = img.alt || '';
+      const label = alt || 'Image';
+
+      nodes.push({
+        id: ensureAnchor(img, 'a'),
+        type: 'artifact',
+        artifactType: 'image',
+        index: nodes.length + 1,
+        preview: truncate(label),
+        href: src,
+        timestamp: Date.now(),
+      });
+    });
+
+    // scrapes doc links
+    const anchors = safeQueryAll(container, 'a[href]');
+    anchors.forEach((a) => {
+      const href = a.href || '';
+      if (!href || seen.has(href)) return;
+      if (!DOC_EXT.test(href)) return;
+
+      seen.add(href);
+
+      const extMatch = href.match(DOC_EXT);
+      const ext = extMatch ? extMatch[1].toUpperCase() : 'DOC';
+      const label = a.textContent.trim() || `${ext} document`;
+
+      nodes.push({
+        id: ensureAnchor(a, 'a'),
+        type: 'artifact',
+        artifactType: ext.toLowerCase(),
+        index: nodes.length + 1,
+        preview: truncate(label),
+        href,
+        timestamp: Date.now(),
+      });
+    });
+
+    const uploadEls = safeQueryAll(container, '[data-testid*="file"], [class*="attachment"], [class*="upload"], [class*="file-block"]');
+    uploadEls.forEach((el) => {
+      const link = el.querySelector('a[href]');
+      const href = link ? link.href : '';
+      if (href && seen.has(href)) return;
+
+      const label = el.textContent.trim();
+      if (!label || label.length < 2) return;
+
+      const id = ensureAnchor(el, 'a');
+      if (seen.has(id)) return;
+      seen.add(id);
+      if (href) seen.add(href);
+
+      nodes.push({
+        id,
+        type: 'artifact',
+        artifactType: 'file',
+        index: nodes.length + 1,
+        preview: truncate(label),
+        href: href || '',
+        timestamp: Date.now(),
+      });
+    });
+
+    return nodes.slice(0, MAX_NODES);
+  }
+
   return {
 
     scrape(platform) {
@@ -202,6 +291,7 @@ window.Dendrite.Scraper = (() => {
         questions: scrapeQuestions(platform),
         codeBlocks: scrapeCodeBlocks(platform),
         links: scrapeLinks(platform),
+        artifacts: scrapeArtifacts(platform),
       };
     },
     //reset ids and anchor when chat swiths.
