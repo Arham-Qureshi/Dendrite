@@ -25,34 +25,18 @@
       </div>
     </div>
 
-    <div class="dn-stats" id="stats-row">
-      <div class="dn-stat">
-        <div class="dn-stat-value" id="stat-questions">0</div>
-        <div class="dn-stat-label">Questions</div>
-      </div>
-      <div class="dn-stat">
-        <div class="dn-stat-value" id="stat-code">0</div>
-        <div class="dn-stat-label">Code</div>
-      </div>
-      <div class="dn-stat">
-        <div class="dn-stat-value" id="stat-links">0</div>
-        <div class="dn-stat-label">Links</div>
-      </div>
-    </div>
-
     <nav class="dn-filters" id="filter-bar" role="tablist" aria-label="Content filter">
-      <button class="dn-filter-btn active" data-filter="questions" role="tab" aria-selected="true"
-        id="filter-questions">
-        <span class="dn-filter-icon" aria-hidden="true">Q.</span>
-        Questions
+      <button class="dn-filter-btn active" data-filter="questions" role="tab" aria-selected="true" id="filter-questions">
+        <span class="dn-filter-count" id="stat-questions">0</span>
+        <span class="dn-filter-label">Questions</span>
       </button>
       <button class="dn-filter-btn" data-filter="code" role="tab" aria-selected="false" id="filter-code">
-        <span class="dn-filter-icon" aria-hidden="true">&lt;/&gt;</span>
-        Code
+        <span class="dn-filter-count" id="stat-code">0</span>
+        <span class="dn-filter-label">Code</span>
       </button>
       <button class="dn-filter-btn" data-filter="links" role="tab" aria-selected="false" id="filter-links">
-        <span class="dn-filter-icon" aria-hidden="true">→</span>
-        Links
+        <span class="dn-filter-count" id="stat-links">0</span>
+        <span class="dn-filter-label">Links</span>
       </button>
     </nav>
 
