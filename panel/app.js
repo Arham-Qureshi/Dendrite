@@ -2,6 +2,7 @@
 (function () {
   const state = {
     questions: [],
+    responses: [],
     codeBlocks: [],
     links: [],
     artifacts: [],
@@ -34,6 +35,8 @@
     moreDropdown: $('more-dropdown'),
     moreToggle: $('more-toggle'),
     moreMenu: $('more-menu'),
+    exportBtn: $('action-export-md'),
+    toast: $('toast'),
   };
 
   async function init() {
@@ -41,6 +44,7 @@
     bindDropdown();
     bindSearch();
     bindRefreshButton();
+    bindExportActions();
     listenForMessages();
 
     // initialize WASM map engine
@@ -53,6 +57,7 @@
 
   function ingestPayload(payload) {
     state.questions = payload.questions || [];
+    state.responses = payload.responses || [];
     state.codeBlocks = payload.codeBlocks || [];
     state.links = payload.links || [];
     state.artifacts = payload.artifacts || [];
@@ -191,6 +196,8 @@
       DOM.moreMenu.addEventListener('click', (e) => {
         const item = e.target.closest('.dn-dropdown-item');
         if (!item) return;
+        // let action items exports
+        if (item.classList.contains('action')) return;
         e.stopPropagation();
 
         activateFilter(item.dataset.filter);
@@ -277,6 +284,34 @@
         forceRefreshChat();
       });
     }
+  }
+
+  // export dev doc
+  function bindExportActions() {
+    if (DOM.exportBtn) {
+      DOM.exportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeDropdown();
+
+        if (!state.connected || !state.questions.length) {
+          showToast('Nothing to export');
+          return;
+        }
+
+        const ok = DendriteExporter.exportDevDoc(state);
+        if (ok) showToast('Dev-Doc exported');
+      });
+    }
+  }
+
+  function showToast(message) {
+    if (!DOM.toast) return;
+    DOM.toast.textContent = message;
+    DOM.toast.classList.add('visible');
+    clearTimeout(DOM.toast._timer);
+    DOM.toast._timer = setTimeout(() => {
+      DOM.toast.classList.remove('visible');
+    }, 2500);
   }
 
   function updateRefreshBtn() {
