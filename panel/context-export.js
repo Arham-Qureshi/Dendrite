@@ -1,19 +1,17 @@
 'use strict';
 const DendriteContextReadmeExporter = (() => {
 
-  //hardcoded context, so we can handoff chats to other llm
+  // hardcoded migration prompt for handoff to another llm
   const HARD_PROMPT = [
-    'You are taking over this project from another LLM session.',
-    'Treat the provided CONTEXT FILE as the source of truth.',
+    'You are taking over an ongoing project conversation from another LLM.',
+    'Use the MIGRATION CONTEXT as authoritative history.',
     '',
-    'Instructions:',
-    '1. Read the entire context file (metadata, graph snapshot, full conversation, code, links, artifacts).',
-    '2. Preserve all technical decisions, constraints, naming, and file paths.',
-    '3. Continue from the latest unresolved user intent with concrete next steps.',
-    '4. If anything is ambiguous, ask focused clarifying questions before changing direction.',
+    'Rules:',
+    '1. Process all Q/A entries in order.',
+    '2. Respect follow-up parent links (Parent: Qx) to preserve reasoning path.',
+    '3. Keep existing technical constraints, file paths, and decisions consistent.',
+    '4. If any answer is too short for a risky change, ask for clarification first.',
     '5. Start your first reply with: "Migration context loaded."',
-    '',
-    'Do not discard important technical details from the conversation context.',
   ].join('\n');
 
   function pad(n) {
@@ -46,164 +44,121 @@ const DendriteContextReadmeExporter = (() => {
       .trim();
   }
 
-  function buildConversation(state) {
-    const questions = state.questions || [];
-    const responses = state.responses || [];
-    const codeBlocks = state.codeBlocks || [];
-    const turns = [];
-    const maxTurns = Math.max(questions.length, responses.length);
-
-    for (let i = 0; i < maxTurns; i++) {
-      turns.push({
-        question: questions[i] || null,
-        response: responses[i] || null,
-      });
-    }
-
-    const codeMap = {};
-    questions.forEach(q => { codeMap[q.id] = []; });
-
-    if (questions.length > 0 && codeBlocks.length > 0) {
-      const sortedQuestions = [...questions].sort((a, b) => a.index - b.index);
-      codeBlocks.forEach(cb => {
-        let owner = sortedQuestions[0];
-        for (const q of sortedQuestions) {
-          if (q.index <= cb.index) owner = q;
-          else break;
-        }
-        if (owner && codeMap[owner.id]) codeMap[owner.id].push(cb);
-      });
-    }
-
-    return { turns, codeMap };
+  function oneLine(text, maxLen) {
+    const clean = normalizeText(text).replace(/\s+/g, ' ');
+    if (!clean) return '';
+    return clean.length <= maxLen ? clean : clean.slice(0, maxLen) + '…';
   }
 
-  function buildGraphSnapshot(state) {
-    const questions = state.questions || [];
+  function squeezeForSummary(text) {
+    // keep answers concise; code blocks overwhelm migration context
+    return normalizeText(text).replace(/```[\s\S]*?```/g, '[code omitted]');
+  }
+
+  function toKeyAnswerLines(text, maxLines = 4, maxChars = 520) {
+    const clean = squeezeForSummary(text);
+    if (!clean) return ['(No assistant response captured for this turn)'];
+
+    const directLines = clean
+      .split('\n')
+      .map(l => l.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+
+    let candidates = directLines;
+    if (candidates.length <= 1) {
+      candidates = clean
+        .replace(/\n/g, ' ')
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    const picked = [];
+    let usedChars = 0;
+    for (const line of candidates) {
+      const short = line.length > 180 ? line.slice(0, 180) + '…' : line;
+      if (!short) continue;
+      if (picked.length >= maxLines) break;
+      if (usedChars + short.length > maxChars) break;
+      picked.push(short);
+      usedChars += short.length;
+    }
+
+    if (!picked.length) {
+      return [oneLine(clean, 220)];
+    }
+    if (candidates.length > picked.length) {
+      picked.push('[truncated]');
+    }
+    return picked;
+  }
+
+  function buildQaRows(state) {
+    const questions = [...(state.questions || [])].sort((a, b) => a.index - b.index);
     const responses = state.responses || [];
-    const codeBlocks = state.codeBlocks || [];
-    const links = state.links || [];
-    const artifacts = state.artifacts || [];
+    const qMap = {};
+    questions.forEach(q => { qMap[q.id] = q; });
 
-    const followUpEdges = questions.filter(q => q.parentId).length;
-    const turnEdges = Math.min(questions.length, responses.length);
-    const nodeCount = questions.length + responses.length + codeBlocks.length + links.length + artifacts.length;
-    const edgeCount = followUpEdges + turnEdges;
-
-    return {
-      nodeCount,
-      edgeCount,
-      followUpEdges,
-      turnEdges,
-    };
+    return questions.map((q, i) => {
+      const response = responses[q.index - 1] || responses[i] || null;
+      const parent = q.parentId && qMap[q.parentId] ? qMap[q.parentId] : null;
+      return {
+        q,
+        response,
+        label: `Q${q.index}`,
+        parentLabel: parent ? `Q${parent.index}` : 'ROOT',
+        depthLabel: q.depth > 0 ? `F${q.depth}` : 'ROOT',
+      };
+    });
   }
 
   function generateReadme(state) {
     const platform = state.platformName || 'Unknown Platform';
     const date = dateStamp();
     const time = timeStamp();
-    const questions = state.questions || [];
-    const responses = state.responses || [];
-    const codeBlocks = state.codeBlocks || [];
-    const links = state.links || [];
-    const artifacts = state.artifacts || [];
-    const { turns, codeMap } = buildConversation(state);
-    const graph = buildGraphSnapshot(state);
+    const rows = buildQaRows(state);
 
     const lines = [];
-
-    //we add the usefull info to user can relate when they migrated.
     lines.push('# Dendrite Migration README');
     lines.push('');
-    lines.push('This file is a portable context package for continuing this session in another LLM chat.');
+    lines.push('Compact handoff context for continuing this chat in another LLM.');
     lines.push('');
-    lines.push('## Paste This Prompt Into The Target LLM');
+    lines.push('## Paste This Prompt Into Target LLM');
     lines.push('');
     lines.push('```text');
     lines.push(HARD_PROMPT);
     lines.push('```');
     lines.push('');
-    lines.push('## Context File');
+    lines.push('## Migration Context (Question -> Short Answer)');
     lines.push('');
-    lines.push('### Session Metadata');
     lines.push(`- Platform: ${platform}`);
     lines.push(`- Exported: ${date} ${time}`);
-    lines.push(`- Questions: ${questions.length}`);
-    lines.push(`- Responses: ${responses.length}`);
-    lines.push(`- Code Blocks: ${codeBlocks.length}`);
-    lines.push(`- Links: ${links.length}`);
-    lines.push(`- Artifacts: ${artifacts.length}`);
-    lines.push('');
-    lines.push('### Graph Context Snapshot');
-    lines.push(`- Nodes: ${graph.nodeCount}`);
-    lines.push(`- Edges: ${graph.edgeCount}`);
-    lines.push(`- Follow-up Links: ${graph.followUpEdges}`);
-    lines.push(`- Turn Pair Links: ${graph.turnEdges}`);
-    lines.push('');
-    lines.push('### Optimized Full Conversation Context');
+    lines.push(`- Total Questions: ${rows.length}`);
     lines.push('');
 
-    turns.forEach((turn, idx) => {
-      lines.push(`#### Turn ${idx + 1}`);
+    if (!rows.length) {
+      lines.push('No conversation found.');
       lines.push('');
-      if (turn.question) {
-        lines.push('**User**');
-        lines.push('');
-        lines.push(normalizeText(turn.question.fullText || turn.question.preview));
-        lines.push('');
-      }
+      return lines.join('\n');
+    }
 
-      if (turn.response) {
-        lines.push('**Assistant**');
-        lines.push('');
-        lines.push(normalizeText(turn.response.fullText || turn.response.preview));
-        lines.push('');
-      }
+    rows.forEach((row) => {
+      const qText = oneLine(row.q.fullText || row.q.preview, 400) || '(empty question)';
+      const answerLines = toKeyAnswerLines(row.response ? row.response.fullText : '');
 
-      if (turn.question) {
-        const codes = codeMap[turn.question.id] || [];
-        if (codes.length) {
-          lines.push('**Code From This Turn**');
-          lines.push('');
-          codes.forEach((cb, codeIdx) => {
-            const lang = cb.language || 'text';
-            lines.push(`Code ${codeIdx + 1}: ${cb.preview || 'Snippet'}`);
-            lines.push('');
-            lines.push('```' + lang);
-            lines.push(normalizeText(cb.fullText));
-            lines.push('```');
-            lines.push('');
-          });
-        }
-      }
+      lines.push(`### ${row.label} (${row.depthLabel})  Parent: ${row.parentLabel}`);
+      lines.push('');
+      lines.push(`Question: ${qText}`);
+      lines.push('');
+      lines.push('Answer (key lines):');
+      answerLines.forEach(a => lines.push(`- ${a}`));
+      lines.push('');
     });
 
-    if (links.length) {
-      lines.push('### Referenced Links');
-      lines.push('');
-      links.forEach((lnk, i) => {
-        const label = normalizeText(lnk.preview || lnk.href || `Link ${i + 1}`);
-        lines.push(`${i + 1}. ${label}`);
-        if (lnk.href) lines.push(`   ${lnk.href}`);
-      });
-      lines.push('');
-    }
-
-    if (artifacts.length) {
-      lines.push('### Artifacts');
-      lines.push('');
-      artifacts.forEach((art, i) => {
-        const type = (art.artifactType || 'file').toUpperCase();
-        const label = normalizeText(art.preview || `Artifact ${i + 1}`);
-        lines.push(`${i + 1}. [${type}] ${label}`);
-        if (art.href) lines.push(`   ${art.href}`);
-      });
-      lines.push('');
-    }
-
-    lines.push('### Handoff Note');
+    const latest = rows[rows.length - 1];
+    lines.push('## Latest User Intent');
     lines.push('');
-    lines.push('Use this entire file as migration context. Continue from the latest user goal before creating new assumptions.');
+    lines.push(oneLine(latest.q.fullText || latest.q.preview, 500) || '(not found)');
     lines.push('');
 
     return lines.join('\n');
