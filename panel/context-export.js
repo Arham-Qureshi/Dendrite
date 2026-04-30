@@ -55,9 +55,78 @@ const DendriteContextReadmeExporter = (() => {
     return normalizeText(text).replace(/```[\s\S]*?```/g, '[code omitted]');
   }
 
-  function toKeyAnswerLines(text, maxLines = 4, maxChars = 520) {
+  function dedupeStrings(items, max = 12) {
+    const out = [];
+    const seen = new Set();
+    (items || []).forEach((item) => {
+      const s = normalizeText(item);
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      out.push(s);
+    });
+    return out.slice(0, max);
+  }
+
+  function normalizeResponseRecord(rec) {
+    if (!rec) {
+      return {
+        fullText: '',
+        images: [],
+        responseLinks: [],
+        snippets: [],
+      };
+    }
+    return {
+      fullText: normalizeText(rec.fullText || ''),
+      images: dedupeStrings(rec.images || [], 10),
+      responseLinks: dedupeStrings(rec.responseLinks || [], 10),
+      snippets: dedupeStrings(rec.snippets || [], 10),
+    };
+  }
+
+  function mergeResponseBucket(bucket) {
+    const fullTextParts = [];
+    const images = [];
+    const responseLinks = [];
+    const snippets = [];
+    const seenImages = new Set();
+    const seenLinks = new Set();
+    const seenSnippets = new Set();
+
+    (bucket || []).forEach((entry) => {
+      const r = normalizeResponseRecord(entry);
+      if (r.fullText) fullTextParts.push(r.fullText);
+      r.images.forEach((u) => {
+        if (!seenImages.has(u)) {
+          seenImages.add(u);
+          images.push(u);
+        }
+      });
+      r.responseLinks.forEach((u) => {
+        if (!seenLinks.has(u)) {
+          seenLinks.add(u);
+          responseLinks.push(u);
+        }
+      });
+      r.snippets.forEach((s) => {
+        if (!seenSnippets.has(s)) {
+          seenSnippets.add(s);
+          snippets.push(s);
+        }
+      });
+    });
+
+    return {
+      fullText: normalizeText(fullTextParts.join('\n\n')),
+      images,
+      responseLinks,
+      snippets,
+    };
+  }
+
+  function extractTextLines(text, maxLines = 4, maxChars = 520) {
     const clean = squeezeForSummary(text);
-    if (!clean) return ['(No assistant response captured for this turn)'];
+    if (!clean) return [];
 
     const directLines = clean
       .split('\n')
@@ -93,18 +162,93 @@ const DendriteContextReadmeExporter = (() => {
     return picked;
   }
 
+  function toKeyAnswerLines(response, maxLines = 6, maxChars = 720) {
+    const r = normalizeResponseRecord(response);
+    const lines = [];
+
+    const textBudget = (r.images.length || r.responseLinks.length) ? Math.max(2, maxLines - 2) : maxLines;
+    const textLines = extractTextLines(r.fullText, textBudget, maxChars);
+    lines.push(...textLines);
+
+    if (!lines.length && r.snippets.length) {
+      r.snippets.slice(0, 3).forEach((s) => lines.push(s));
+    }
+
+    if (r.images.length) {
+      r.images.slice(0, 2).forEach((u) => lines.push(`[Image] ${u}`));
+    }
+
+    if (r.responseLinks.length) {
+      r.responseLinks.slice(0, 2).forEach((u) => lines.push(`[Link] ${u}`));
+    }
+
+    if (!lines.length) return ['(No assistant response captured for this turn)'];
+
+    if (lines.length > maxLines) {
+      return [...lines.slice(0, maxLines - 1), '[truncated]'];
+    }
+    return lines;
+  }
+
+  function orderOfNode(node, fallback) {
+    const n = Number(node && node.domOrder);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  }
+
   function buildQaRows(state) {
     const questions = [...(state.questions || [])].sort((a, b) => a.index - b.index);
-    const responses = state.responses || [];
+    const responses = [...(state.responses || [])];
     const qMap = {};
     questions.forEach(q => { qMap[q.id] = q; });
 
+    // reliable pairing: bucket assistant responses in the DOM window of each question.
+    responses.sort((a, b) => {
+      const oa = orderOfNode(a, (a.index || 0) * 2 + 1);
+      const ob = orderOfNode(b, (b.index || 0) * 2 + 1);
+      return oa - ob;
+    });
+
+    const responseOrders = responses.map((r) => orderOfNode(r, (r.index || 0) * 2 + 1));
+    const used = new Set();
+
     return questions.map((q, i) => {
-      const response = responses[q.index - 1] || responses[i] || null;
+      const qOrder = orderOfNode(q, (q.index || 0) * 2);
+      const nextQ = questions[i + 1] || null;
+      const nextQOrder = nextQ ? orderOfNode(nextQ, (nextQ.index || 0) * 2) : Number.POSITIVE_INFINITY;
+      const bucket = [];
+
+      for (let rIdx = 0; rIdx < responses.length; rIdx++) {
+        if (used.has(rIdx)) continue;
+        const ro = responseOrders[rIdx];
+        if (ro > qOrder && ro < nextQOrder) {
+          bucket.push(responses[rIdx]);
+          used.add(rIdx);
+        }
+      }
+
+      // fallback for odd layouts/offsets: nearest unused response after this question
+      if (!bucket.length) {
+        let bestIdx = -1;
+        let bestOrder = Number.POSITIVE_INFINITY;
+        for (let rIdx = 0; rIdx < responses.length; rIdx++) {
+          if (used.has(rIdx)) continue;
+          const ro = responseOrders[rIdx];
+          if (ro > qOrder && ro < bestOrder) {
+            bestOrder = ro;
+            bestIdx = rIdx;
+          }
+        }
+        if (bestIdx >= 0) {
+          bucket.push(responses[bestIdx]);
+          used.add(bestIdx);
+        }
+      }
+
       const parent = q.parentId && qMap[q.parentId] ? qMap[q.parentId] : null;
       return {
         q,
-        response,
+        response: mergeResponseBucket(bucket),
+        responseEntries: bucket,
         label: `Q${q.index}`,
         parentLabel: parent ? `Q${parent.index}` : 'ROOT',
         depthLabel: q.depth > 0 ? `F${q.depth}` : 'ROOT',
@@ -144,7 +288,7 @@ const DendriteContextReadmeExporter = (() => {
 
     rows.forEach((row) => {
       const qText = oneLine(row.q.fullText || row.q.preview, 400) || '(empty question)';
-      const answerLines = toKeyAnswerLines(row.response ? row.response.fullText : '');
+      const answerLines = toKeyAnswerLines(row.response);
 
       lines.push(`### ${row.label} (${row.depthLabel})  Parent: ${row.parentLabel}`);
       lines.push('');
