@@ -64,6 +64,28 @@ window.Dendrite.Scraper = (() => {
     return nodes.slice(0, MAX_NODES);
   }
 
+  // scrapes the llms responses and make markdown file for big leagues
+  function scrapeResponses(platform) {
+    const els = safeQueryAll(document, platform.selectors.assistantMessage);
+    const nodes = [];
+
+    els.forEach((el, i) => {
+      const raw = platform.getMessageText(el);
+      if (!raw) return;
+
+      nodes.push({
+        id: ensureAnchor(el, 'r'),
+        type: 'response',
+        index: i + 1,
+        preview: truncate(raw),
+        fullText: raw,
+        timestamp: Date.now(),
+      });
+    });
+
+    return nodes.slice(0, MAX_NODES);
+  }
+
   function extractCodeHeading(el, code, previousQuestionText) {
     //Look for a filename comment
     const firstLines = code.split('\n').slice(0, 3);
@@ -289,6 +311,7 @@ window.Dendrite.Scraper = (() => {
     scrape(platform) {
       return {
         questions: scrapeQuestions(platform),
+        responses: scrapeResponses(platform),
         codeBlocks: scrapeCodeBlocks(platform),
         links: scrapeLinks(platform),
         artifacts: scrapeArtifacts(platform),

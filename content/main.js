@@ -95,6 +95,7 @@
       action: 'DENDRITE_UPDATE',
       payload: {
         questions: data.questions,
+        responses: data.responses || [],
         codeBlocks: data.codeBlocks,
         links: data.links,
         artifacts: data.artifacts || [],
@@ -158,6 +159,7 @@
           success: true,
           payload: {
             questions: data.questions,
+            responses: data.responses || [],
             codeBlocks: data.codeBlocks,
             links: data.links,
             artifacts: data.artifacts || [],
