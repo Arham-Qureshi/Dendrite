@@ -19,19 +19,29 @@
   const DOM = {
     list: $('node-list'),
     searchInput: $('search-input'),
+    searchWrap: document.querySelector('.dn-search-wrap'),
     filterBar: $('filter-bar'),
     platformBadge: $('platform-badge'),
     statQuestions: $('stat-questions'),
     statCode: $('stat-code'),
     statLinks: $('stat-links'),
     refreshBtn: $('refresh-btn'),
+    mapViewport: $('map-viewport'),
+    mapTooltip: $('map-tooltip'),
+    mapLegend: $('map-legend'),
   };
 
-  function init() {
+  async function init() {
     bindFilters();
     bindSearch();
     bindRefreshButton();
     listenForMessages();
+
+    // initialize WASM map engine
+    if (typeof DendriteMap !== 'undefined' && DOM.mapViewport) {
+      await DendriteMap.init(DOM.mapViewport, DOM.mapTooltip);
+    }
+
     refreshFromActiveTab();
   }
 
@@ -160,6 +170,14 @@
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
       state.activeFilter = btn.dataset.filter;
+
+      const isMap = state.activeFilter === 'map';
+      DOM.list.style.display = isMap ? 'none' : '';
+      DOM.mapViewport.classList.toggle('visible', isMap);
+      DOM.mapLegend.style.display = isMap ? '' : 'none';
+
+      if (DOM.searchWrap) DOM.searchWrap.style.display = isMap ? 'none' : '';
+
       render();
     });
   }
@@ -197,6 +215,12 @@
   function render() {
     if (!state.connected) { showDisconnected(); return; }
 
+    // tree map view xD
+    if (state.activeFilter === 'map') {
+      renderMap();
+      return;
+    }
+
     const nodes = getFilteredNodes();
     if (nodes.length === 0) { showEmpty(); return; }
 
@@ -208,6 +232,11 @@
 
     DOM.list.innerHTML = '';
     DOM.list.appendChild(frag);
+  }
+
+  function renderMap() {
+    if (typeof DendriteMap === 'undefined') return;
+    DendriteMap.render(state.questions, (node) => scrollTo(node));
   }
 
   function groupFollowUps(nodes) {
