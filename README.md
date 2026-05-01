@@ -1,7 +1,7 @@
 <div align="center">
   <img src="icons/icon128.png" alt="Dendrite Logo" width="128" />
 
-  # <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/brain.svg" width="32" height="32" align="absmiddle" /> Dendrite
+  # <img src="https://api.iconify.design/lucide:brain.svg?color=white" width="32" height="32" align="absmiddle" /> Dendrite
   **A Neural Navigator for your LLM Conversations**
 
   [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)]()
@@ -16,7 +16,7 @@
 
 Dendrite is a powerful, local-first browser extension designed for power users who have long, complex, and branching conversations with Large Language Models. Instead of endlessly scrolling through a single thread to find that one code snippet or follow-up question, Dendrite extracts and organizes your chat into a clean, searchable, and navigable sidebar index, complete with a **Logic Map** of your entire thought process.
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/list.svg" width="24" height="24" align="absmiddle" /> Table of Contents
+## <img src="https://api.iconify.design/lucide:list.svg?color=white" width="24" height="24" align="absmiddle" /> Table of Contents
 
 - [Features](#features)
 - [How It Works](#how-it-works)
@@ -27,21 +27,21 @@ Dendrite is a powerful, local-first browser extension designed for power users w
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/sparkles.svg" width="24" height="24" align="absmiddle" /> Features
+## <img src="https://api.iconify.design/lucide:sparkles.svg?color=white" width="24" height="24" align="absmiddle" /> Features
 
-- <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/globe.svg" width="16" height="16" align="absmiddle" /> **Cross-Platform Support**: Works seamlessly on ChatGPT (`chatgpt.com`), Claude (`claude.ai`), and Google Gemini (`gemini.google.com`).
-- <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/scan-search.svg" width="16" height="16" align="absmiddle" /> **Intelligent Scraping**: Automatically extracts and categorizes:
+- <img src="https://api.iconify.design/lucide:globe.svg?color=white" width="16" height="16" align="absmiddle" /> **Cross-Platform Support**: Works seamlessly on ChatGPT (`chatgpt.com`), Claude (`claude.ai`), and Google Gemini (`gemini.google.com`).
+- <img src="https://api.iconify.design/lucide:scan-search.svg?color=white" width="16" height="16" align="absmiddle" /> **Intelligent Scraping**: Automatically extracts and categorizes:
   - **Questions**: Follow your prompts and follow-up threads.
   - **Code Blocks**: Auto-detects programming languages and extracts headers/functions for easy copying.
   - **Links**: Aggregates all external URLs referenced in the chat.
   - **Artifacts**: Identifies uploaded documents (PDF, DOCX) and generated images.
-- <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/git-branch.svg" width="16" height="16" align="absmiddle" /> **Interactive Logic Map**: Visualizes your conversation as a branching dendrogram (tree) so you can easily see follow-up paths and alternate prompt branches.
-- <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/save.svg" width="16" height="16" align="absmiddle" /> **Context Export**: One-click export of your conversation context into a polished `Dev-Doc.md` or `Context-README.md` file for easy archival and sharing.
-- <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/zap.svg" width="16" height="16" align="absmiddle" /> **Lightning Fast**: Built with a WebAssembly (WASM) layout engine compiled from C++ for instantaneous map rendering—even on conversations with hundreds of nodes.
+- <img src="https://api.iconify.design/lucide:git-branch.svg?color=white" width="16" height="16" align="absmiddle" /> **Interactive Logic Map**: Visualizes your conversation as a branching dendrogram (tree) so you can easily see follow-up paths and alternate prompt branches.
+- <img src="https://api.iconify.design/lucide:save.svg?color=white" width="16" height="16" align="absmiddle" /> **Context Export**: One-click export of your conversation context into a polished `Dev-Doc.md` or `Context-README.md` file for easy archival and sharing.
+- <img src="https://api.iconify.design/lucide:zap.svg?color=white" width="16" height="16" align="absmiddle" /> **Lightning Fast**: Built with a WebAssembly (WASM) layout engine compiled from C++ for instantaneous map rendering—even on conversations with hundreds of nodes.
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/settings.svg" width="24" height="24" align="absmiddle" /> How It Works
+## <img src="https://api.iconify.design/lucide:settings.svg?color=white" width="24" height="24" align="absmiddle" /> How It Works
 
 Dendrite operates entirely within your browser for maximum privacy. It uses highly-optimized Content Scripts to analyze the DOM of the active LLM platform without relying on external APIs.
 
@@ -51,7 +51,7 @@ Dendrite operates entirely within your browser for maximum privacy. It uses high
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/network.svg" width="24" height="24" align="absmiddle" /> The Logic Map (WASM)
+## <img src="https://api.iconify.design/lucide:network.svg?color=white" width="24" height="24" align="absmiddle" /> The Logic Map (WASM)
 
 To handle massive, branching conversations smoothly, Dendrite leverages a custom WebAssembly tree-rendering engine (`tree_engine.wasm`). 
 
@@ -61,7 +61,7 @@ To handle massive, branching conversations smoothly, Dendrite leverages a custom
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/rocket.svg" width="24" height="24" align="absmiddle" /> Quick Start (Run Locally)
+## <img src="https://api.iconify.design/lucide:rocket.svg?color=white" width="24" height="24" align="absmiddle" /> Quick Start (Run Locally)
 
 Because Dendrite is built with Vanilla JavaScript, HTML, CSS, and pre-compiled WASM, there are **no heavy `node_modules` or build steps required** to run it.
 
@@ -91,7 +91,7 @@ Because Dendrite is built with Vanilla JavaScript, HTML, CSS, and pre-compiled W
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/package.svg" width="24" height="24" align="absmiddle" /> Build Details
+## <img src="https://api.iconify.design/lucide:package.svg?color=white" width="24" height="24" align="absmiddle" /> Build Details
 
 > **Note:** You only need to follow these steps if you are modifying the C++ source code for the Logic Map engine. For standard extension usage or UI modification, no build step is required!
 
@@ -112,7 +112,7 @@ If you wish to modify the map's layout algorithm (`wasm/tree_engine.cpp`), you m
 
 ---
 
-## <img src="https://cdn.jsdelivr.net/npm/lucide-static/icons/users.svg" width="24" height="24" align="absmiddle" /> Contributing
+## <img src="https://api.iconify.design/lucide:users.svg?color=white" width="24" height="24" align="absmiddle" /> Contributing
 
 Contributions are highly welcome! To contribute:
 1. Fork the repo
