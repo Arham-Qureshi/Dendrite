@@ -1,47 +1,47 @@
-# 🧠 Architecture: Extension Core (Background & Content Scripts)
+# <img src="https://api.iconify.design/lucide:brain.svg?color=white" width="32" height="32" align="absmiddle" /> Architecture: Extension Core (Background & Content Scripts)
 
 This document outlines the core operational loop of Dendrite—how it hooks into the browser, intercepts DOM updates from LLM platforms, and extracts valuable contextual data.
 
-## 🕸️ High-Level Component Flow
+## <img src="https://api.iconify.design/lucide:network.svg?color=white" width="24" height="24" align="absmiddle" /> High-Level Component Flow
 
 ```mermaid
 flowchart TD
-  Browser["Browser (Active Tab)"]
-  LLM["LLM Platform (ChatGPT/Claude/Gemini)"]
+  Browser["Browser Active Tab"]
+  LLM["LLM Platform"]
   Panel["Panel UI"]
 
-  subgraph Background["background/service-worker.js"]
+  subgraph Background
     SW["Service Worker"]
     CM["Context Menus"]
     TI["Tab Injector"]
   end
 
-  subgraph Content["content/ (Injected)"]
-    Obs["observer.js<br/>(MutationObserver)"]
-    Main["main.js<br/>(Logic Flow Engine)"]
-    Scrape["scraper.js<br/>(Entity Extractor)"]
-    Nav["navigator.js<br/>(Scroll Anchors)"]
-    Plat["platforms.js<br/>(CSS Selectors)"]
+  subgraph Content
+    Obs["observer js"]
+    Main["main js"]
+    Scrape["scraper js"]
+    Nav["navigator js"]
+    Plat["platforms js"]
   end
 
-  Browser -->|Navigation / Tab Switch| SW
-  SW -->|Injects if missing| Obs
-  LLM -->|DOM Updates (streaming text)| Obs
-  Obs -->|Debounced triggers| Main
-  Main -->|Queries DOM| Scrape
-  Plat -->|Provides rules| Scrape
-  Scrape -->|Returns nodes| Main
-  Main -->|chrome.runtime.sendMessage| Panel
+  Browser --> SW
+  SW --> Obs
+  LLM --> Obs
+  Obs --> Main
+  Main --> Scrape
+  Plat --> Scrape
+  Scrape --> Main
+  Main --> Panel
 ```
 
-## ⚙️ The Background Service Worker (`background/service-worker.js`)
+## <img src="https://api.iconify.design/lucide:settings.svg?color=white" width="24" height="24" align="absmiddle" /> The Background Service Worker (`background/service-worker.js`)
 The Service Worker acts as the central router for the extension. It is responsible for:
 1. **Side Panel Initialization:** Binds the panel to open when the extension icon is clicked.
 2. **Context Menu:** Installs the "Ask Dendrite" right-click option, allowing users to select text and trigger a follow-up explicitly.
 3. **Tab Monitoring:** Listens for `onActivated` and `onUpdated` events. Since LLM interfaces are Single Page Applications (SPAs), traditional page reloads don't happen. The service worker notifies the extension when the URL changes so it can re-initialize parsing.
 4. **Script Injection:** If the panel asks for a refresh but the content scripts aren't present (e.g., after an extension update or browser restart), the service worker dynamically injects the `content/` scripts using `chrome.scripting`.
 
-## 📄 The Content Script Engine
+## <img src="https://api.iconify.design/lucide:file-code.svg?color=white" width="24" height="24" align="absmiddle" /> The Content Script Engine
 
 The heavy lifting happens entirely within the active LLM tab.
 
