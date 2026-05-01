@@ -1,33 +1,33 @@
-# 🖥️ Architecture: Panel UI & State Management
+# <img src="https://api.iconify.design/lucide:layout-panel-left.svg?color=white" width="32" height="32" align="absmiddle" /> Architecture: Panel UI & State Management
 
 The Panel represents the frontend interface of Dendrite. It lives inside the Chrome Side Panel API (`chrome.sidePanel`) and acts as an independent application reacting to state changes from the active tab.
 
-## 📊 Panel Component Hierarchy
+## <img src="https://api.iconify.design/lucide:bar-chart.svg?color=white" width="24" height="24" align="absmiddle" /> Panel Component Hierarchy
 
 ```mermaid
 flowchart TD
   Browser["Download Manager"]
-  Content["Content Scripts<br/>(Sends State Payload)"]
-  WASM["tree_engine.wasm<br/>(Calculates XY positions)"]
+  Content["Content Scripts"]
+  WASM["tree engine wasm"]
 
-  subgraph Panel["panel/"]
-    App["app.js<br/>(State and DOM Controller)"]
-    DOM["index.html<br/>(Views)"]
-    Export["exporter.js and context-export.js<br/>(Markdown Builders)"]
-    MapJS["map.js<br/>(SVG Renderer and WASM Bridge)"]
+  subgraph Panel
+    App["app js"]
+    DOM["index html"]
+    Export["exporter js and context export js"]
+    MapJS["map js"]
   end
 
-  Content -->|DENDRITE_UPDATE| App
-  App -->|Updates UI| DOM
-  App -->|Calls if active| MapJS
-  MapJS -->|Passes nodes| WASM
-  WASM -->|Returns layout| MapJS
-  MapJS -->|Draws SVG| DOM
-  App -->|User clicks Export| Export
-  Export -->|Triggers download| Browser
+  Content --> App
+  App --> DOM
+  App --> MapJS
+  MapJS --> WASM
+  WASM --> MapJS
+  MapJS --> DOM
+  App --> Export
+  Export --> Browser
 ```
 
-## 🧠 State Management (`panel/app.js`)
+## <img src="https://api.iconify.design/lucide:brain.svg?color=white" width="24" height="24" align="absmiddle" /> State Management (`panel/app.js`)
 Dendrite does not use frameworks like React or Vue to ensure maximum performance and minimal memory overhead. Instead, it relies on a central `state` object inside `app.js`.
 
 When `main.js` (content script) finishes parsing a chat, it broadcasts the payload. `app.js` ingests this payload, overwrites its internal state, and calls `render()`.
@@ -45,17 +45,17 @@ const state = {
 };
 ```
 
-## 🔄 DOM Manipulation
+## <img src="https://api.iconify.design/lucide:refresh-cw.svg?color=white" width="24" height="24" align="absmiddle" /> DOM Manipulation
 The `render()` function is a pure vanilla JS builder. It dynamically creates HTML elements (`document.createElement`) and leverages `DocumentFragment` to batch DOM insertions, preventing layout thrashing and guaranteeing smooth UI updates even when indexing chats with thousands of nodes.
 
-## 🗂️ Exporter Modules (`exporter.js` & `context-export.js`)
+## <img src="https://api.iconify.design/lucide:folder-output.svg?color=white" width="24" height="24" align="absmiddle" /> Exporter Modules (`exporter.js` & `context-export.js`)
 When a user clicks "Export Dev-Doc" or "Export Context README", `app.js` hands the current `state` object over to these modules.
 1. They iterate over the `state.questions` and `state.responses`.
 2. They intelligently interleave the questions with their corresponding response artifacts and code snippets.
 3. They generate a pure Markdown string.
 4. They create a temporary `Blob` and trigger a silent browser download, bypassing the need for backend servers.
 
-## 🗺️ The Map Interface (`map.js`)
+## <img src="https://api.iconify.design/lucide:map.svg?color=white" width="24" height="24" align="absmiddle" /> The Map Interface (`map.js`)
 When the user clicks the "Map" filter, `app.js` delegates control to `map.js`.
 - It takes the 1D array of `questions` (which contain `parentId` relationships).
 - It communicates with the WASM engine (detailed in the next doc) to compute the graph structure.
